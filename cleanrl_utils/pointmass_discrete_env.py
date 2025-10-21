@@ -34,6 +34,8 @@ class PointMassDiscreteEnv(PointMassContinuousEnv):
         self.observation_space = spaces.Box(
             low=-1.0, high=1.0, shape=(obs_len + 5,), dtype=np.float32
         )
+        # print(self.observation_space.shape)
+        # exit()
         self._last_action = np.zeros(2, dtype=np.float32)
 
         # Initialize with random positions
@@ -44,8 +46,8 @@ class PointMassDiscreteEnv(PointMassContinuousEnv):
 
         # TODO: TURN DISCRETE ACTIONS INTO A CONTINUOUS ONE.
         control = np.zeros(2, dtype=np.float32)  # placeholder logic
-        magnitude = 2 ** (action % self._step_segments + 1) / 2**self._step_segments
-        # magnitude = (action % self._step_segments + 1) / self._step_segments
+        # magnitude = 2 ** (action % self._step_segments + 1) / 2**self._step_segments
+        magnitude = (action % self._step_segments + 1) / self._step_segments
         if action // self._step_segments == 0:
             control[0] += magnitude
         elif action // self._step_segments == 1:
@@ -93,10 +95,10 @@ class PointMassDiscreteEnv(PointMassContinuousEnv):
         # TODO: CHANGE THE OBSERVATION IF YOU LIKE.
         extra_obs = np.array(
             [
-                (self._goal_pos[0] - self._agent_pos[0] ) / self.world_width,
-                (self._goal_pos[1] - self._agent_pos[1] ) / self.world_height,
-                np.linalg.norm(self._agent_pos - self._goal_pos),
-            ]
+                obs[0] - obs[2],
+                obs[1] - obs[3],
+                np.linalg.norm(obs[:2] - obs[2:4]),
+            ],
         )
 
         # print(np.concatenate([obs, extra_obs, self._last_action]).shape)
