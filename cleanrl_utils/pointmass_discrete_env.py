@@ -27,12 +27,12 @@ class PointMassDiscreteEnv(PointMassContinuousEnv):
 
         # TODO: Decide how many discrete actions you need.
         # Action space: some number of discrete actions
-        self._step_segments = 4
+        self._step_segments = 5
         self.action_space = spaces.Discrete(self._step_segments * 4 + 1)
         self._previous_distance = None
         obs_len = 4 + len(self._get_obstacles()) * 4
         self.observation_space = spaces.Box(
-            low=-1.0, high=1.0, shape=(obs_len + 3,), dtype=np.float32
+            low=-1.0, high=1.0, shape=(obs_len + 5,), dtype=np.float32
         )
         self._last_action = np.zeros(2, dtype=np.float32)
 
@@ -64,16 +64,20 @@ class PointMassDiscreteEnv(PointMassContinuousEnv):
         distance = np.linalg.norm(self._agent_pos - self._goal_pos)
         if self._previous_distance is None:
             self._previous_distance = distance
-        reward = 0.5 if distance < self.goal_radius else -0.1
+        reward = (
+            0.5
+            if distance < self.goal_radius
+            else (self._previous_distance - distance) * 5.0
+        )
         # Collision
         if self._check_out_of_bounds(observation[:2], self.agent_radius):
             reward -= 0.5
         elif self._check_collision(observation[:2], self.agent_radius):
             reward -= 0.5
         # Distance
-        if self._previous_distance is None:
-            self._previous_distance = distance
-        reward += (self._previous_distance - distance) * 2.0
+        # if self._previous_distance is None:
+        #     self._previous_distance = distance
+        # reward += (self._previous_distance - distance) * 5.0
         self._previous_distance = distance
 
         return observation, reward, terminated, truncated, info
@@ -86,8 +90,14 @@ class PointMassDiscreteEnv(PointMassContinuousEnv):
     def _get_obs(self) -> np.ndarray:
         """Get normalized observation vector."""
         obs = super()._get_obs()
-        extra_obs = np.array([np.linalg.norm(obs[:2] - obs[2:4])])
         # TODO: CHANGE THE OBSERVATION IF YOU LIKE.
+        extra_obs = np.array(
+            [
+                (self._goal_pos[0] - self._agent_pos[0] ) / self.world_width,
+                (self._goal_pos[1] - self._agent_pos[1] ) / self.world_height,
+                np.linalg.norm(self._agent_pos - self._goal_pos),
+            ]
+        )
 
         # print(np.concatenate([obs, extra_obs, self._last_action]).shape)
         return np.concatenate([obs, extra_obs, self._last_action])
