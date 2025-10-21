@@ -63,19 +63,19 @@ class PointMassDiscreteEnv(PointMassContinuousEnv):
         # print(observation.shape)
 
         # TODO: DEFINE THE REWARD SIGNAL
-        distance = np.linalg.norm(self._agent_pos - self._goal_pos)
+        distance = np.linalg.norm(observation[:2] - observation[2:4])
         if self._previous_distance is None:
             self._previous_distance = distance
         reward = (
-            0.5
-            if distance < self.goal_radius
+            1
+            if distance < (self.goal_radius / self.world_width)
             else (self._previous_distance - distance) * 5.0
         )
         # Collision
         if self._check_out_of_bounds(observation[:2], self.agent_radius):
-            reward -= 0.5
+            reward = - 0.5
         elif self._check_collision(observation[:2], self.agent_radius):
-            reward -= 0.5
+            reward = - 0.5
         # Distance
         # if self._previous_distance is None:
         #     self._previous_distance = distance
