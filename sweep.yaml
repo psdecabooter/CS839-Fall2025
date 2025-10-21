@@ -1,0 +1,27 @@
+program: cleanrl/ppo.py
+method: bayes  # bayes, random, or grid
+metric:
+  name: charts/episodic_return
+  goal: maximize
+parameters:
+  # Hyperparameters to tune
+  learning-rate:
+    distribution: log_uniform_values
+    min: 0.0001
+    max: 0.001
+  clip-coef:
+    values: [0.15, 0.2, 0.25, 0.3]
+  ent-coef:
+    distribution: uniform
+    min: 0.0
+    max: 0.02
+  vf-coef:
+    values: [0.5, 0.75, 1.0]
+  
+  # Fixed parameters for your setup
+  env-id:
+    value: "PointMassDiscrete-v0"
+  total-timesteps:
+    value: 500000
+  seed:
+    value: 1

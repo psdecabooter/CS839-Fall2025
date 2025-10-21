@@ -27,7 +27,14 @@ class PointMassDiscreteEnv(PointMassContinuousEnv):
 
         # TODO: Decide how many discrete actions you need.
         # Action space: some number of discrete actions
-        self.action_space = spaces.Discrete(4)
+        self._step_segments = 4
+        self.action_space = spaces.Discrete(self._step_segments * 4 + 1)
+        self._previous_distance = None
+        obs_len = 4 + len(self._get_obstacles()) * 4
+        self.observation_space = spaces.Box(
+            low=-1.0, high=1.0, shape=(obs_len + 3,), dtype=np.float32
+        )
+        self._last_action = np.zeros(2, dtype=np.float32)
 
         # Initialize with random positions
         self._reset_positions()
@@ -36,23 +43,54 @@ class PointMassDiscreteEnv(PointMassContinuousEnv):
         assert self.action_space.contains(action)
 
         # TODO: TURN DISCRETE ACTIONS INTO A CONTINUOUS ONE.
-        control = np.ones(2)  # placeholder logic
+        control = np.zeros(2, dtype=np.float32)  # placeholder logic
+        magnitude = 2 ** (action % self._step_segments + 1) / 2**self._step_segments
+        # magnitude = (action % self._step_segments + 1) / self._step_segments
+        if action // self._step_segments == 0:
+            control[0] += magnitude
+        elif action // self._step_segments == 1:
+            control[0] -= magnitude
+        elif action // self._step_segments == 2:
+            control[1] += magnitude
+        elif action // self._step_segments == 3:
+            control[1] -= magnitude
+        self._last_action = control
 
         _, _, terminated, truncated, info = super().step(control)
         observation = self._get_obs()
+        # print(observation.shape)
 
         # TODO: DEFINE THE REWARD SIGNAL
-        reward = 0.0
+        distance = np.linalg.norm(self._agent_pos - self._goal_pos)
+        if self._previous_distance is None:
+            self._previous_distance = distance
+        reward = 0.5 if distance < self.goal_radius else -0.1
+        # Collision
+        if self._check_out_of_bounds(observation[:2], self.agent_radius):
+            reward -= 0.5
+        elif self._check_collision(observation[:2], self.agent_radius):
+            reward -= 0.5
+        # Distance
+        if self._previous_distance is None:
+            self._previous_distance = distance
+        reward += (self._previous_distance - distance) * 2.0
+        self._previous_distance = distance
 
         return observation, reward, terminated, truncated, info
+
+    def reset(self, *args, **kwargs):
+        self._previous_distance = None
+        self._last_action = np.zeros(2, dtype=np.float32)
+        return super().reset(*args, **kwargs)
 
     def _get_obs(self) -> np.ndarray:
         """Get normalized observation vector."""
         obs = super()._get_obs()
-
+        extra_obs = np.array([np.linalg.norm(obs[:2] - obs[2:4])])
         # TODO: CHANGE THE OBSERVATION IF YOU LIKE.
 
-        return obs
+        # print(np.concatenate([obs, extra_obs, self._last_action]).shape)
+        return np.concatenate([obs, extra_obs, self._last_action])
 
     def close(self):
         pass

@@ -242,6 +242,12 @@ if __name__ == "__main__":
                         writer.add_scalar(
                             "charts/episodic_length", info["episode"]["l"], global_step
                         )
+                    if info and "actual_performance" in info:
+                        writer.add_scalar(
+                            "charts/actual_performance",
+                            info["actual_performance"],
+                            global_step,
+                        )
 
         # bootstrap value if not done
         with torch.no_grad():
